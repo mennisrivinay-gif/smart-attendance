@@ -263,7 +263,21 @@ const TODAY = () => new Date().toISOString().slice(0,10);
 // and on cross-origin iframes without the right permissions policy.
 // ═══════════════════════════════════════════════════════
 function isSecureContext() {
-  return window.isSecureContext === true;
+  // window.isSecureContext is the standard check, but a few older/embedded
+  // WebViews report it incorrectly even on genuine https:// origins. As a
+  // fallback, treat https/localhost/127.0.0.1 protocols as secure directly,
+  // and surface what we detected in the console for debugging.
+  const byFlag = window.isSecureContext === true;
+  const byProtocol = location.protocol === 'https:' ||
+                      location.hostname === 'localhost' ||
+                      location.hostname === '127.0.0.1';
+  console.log('[SmartAttendance] secure-context check →', {
+    isSecureContextFlag: window.isSecureContext,
+    protocol: location.protocol,
+    hostname: location.hostname,
+    result: byFlag || byProtocol,
+  });
+  return byFlag || byProtocol;
 }
 function hasCameraAPI() {
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
