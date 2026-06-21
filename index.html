@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>Smart Attendance System</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #070B14;
+  --surface: #0D1526;
+  --card: #111D35;
+  --border: #1A2E50;
+  --accent: #3B82F6;
+  --accent2: #6366F1;
+  --green: #10B981;
+  --red: #EF4444;
+  --amber: #F59E0B;
+  --text: #F1F5F9;
+  --text2: #94A3B8;
+  --text3: #3D5A80;
+  --font: 'Outfit', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--font);color:var(--text)}
+#app{height:100%;display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
+.screen{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:80px}
+.screen::-webkit-scrollbar{display:none}
+.hdr{padding:48px 20px 16px;display:flex;justify-content:space-between;align-items:flex-end}
+.hdr-title{font-size:26px;font-weight:800;letter-spacing:-0.5px}
+.hdr-sub{font-size:11px;color:var(--text3);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px}
+.icon-btn{width:42px;height:42px;border-radius:50%;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);font-size:18px}
+#nav{position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;padding:8px 0 24px;z-index:100}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text3);transition:color .2s;padding:4px 0}
+.nav-btn.active{color:var(--accent)}
+.nav-btn svg{width:20px;height:20px}
+.nav-btn span{font-size:10px;font-weight:600;font-family:var(--font)}
+.nav-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);opacity:0}
+.nav-btn.active .nav-dot{opacity:1}
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px}
+.card+.card{margin-top:10px}
+.section-label{font-size:11px;color:var(--text3);letter-spacing:2.5px;text-transform:uppercase;margin:20px 0 10px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px}
+.stat-val{font-size:30px;font-weight:800;font-family:var(--font)}
+.stat-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 20px;border-radius:14px;border:none;cursor:pointer;font-family:var(--font);font-size:14px;font-weight:700;transition:all .2s;width:100%}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn-primary:active{opacity:.85;transform:scale(.98)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.btn-green{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.btn-red{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.btn-sm{padding:8px 14px;font-size:12px;border-radius:10px;width:auto}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.input-wrap{position:relative;margin-bottom:12px}
+.input-wrap label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:500}
+.inp{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-size:14px;font-family:var(--font);outline:none;transition:border-color .2s}
+.inp:focus{border-color:var(--accent)}
+.inp::placeholder{color:var(--text3)}
+.badge{display:inline-flex;align-items:center;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-green{background:rgba(16,185,129,.12);color:var(--green)}
+.badge-red{background:rgba(239,68,68,.1);color:var(--red)}
+.badge-amber{background:rgba(245,158,11,.1);color:var(--amber)}
+.badge-blue{background:rgba(59,130,246,.12);color:var(--accent)}
+#toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-80px);background:#1E293B;border:1px solid var(--border);border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;z-index:9999;transition:transform .3s;white-space:nowrap;max-width:90vw}
+#toast.show{transform:translateX(-50%) translateY(0)}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
+.modal-bg.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:24px 24px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;transform:translateY(100%);transition:transform .3s;max-height:90vh;overflow-y:auto}
+.modal-bg.open .modal{transform:translateY(0)}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:16px}
+#cam-container{position:relative;width:100%;aspect-ratio:3/4;background:#000;border-radius:16px;overflow:hidden;margin-bottom:12px}
+#cam-container video,#cam-container canvas{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+#cam-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.face-box{width:180px;height:220px;border:2px solid var(--accent);border-radius:16px;position:relative;box-shadow:0 0 0 2000px rgba(0,0,0,.5)}
+.face-box::before,.face-box::after{content:'';position:absolute;width:24px;height:24px;border-color:var(--accent);border-style:solid}
+.face-box::before{top:-2px;left:-2px;border-width:3px 0 0 3px;border-radius:4px 0 0 0}
+.face-box::after{bottom:-2px;right:-2px;border-width:0 3px 3px 0;border-radius:0 0 4px 0}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);animation:scanAnim 2s linear infinite}
+@keyframes scanAnim{0%{top:0}100%{top:100%}}
+#face-status{position:absolute;bottom:12px;left:0;right:0;text-align:center;font-size:13px;font-weight:600;background:rgba(0,0,0,.6);padding:6px}
+.permission-box{text-align:center;padding:30px 16px}
+.permission-icon{font-size:48px;margin-bottom:12px}
+.period-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.period-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px;cursor:pointer;transition:all .2s;text-align:center}
+.period-card.active-period{border-color:var(--accent);background:rgba(59,130,246,.08)}
+.period-card.done{border-color:var(--green);background:rgba(16,185,129,.05)}
+.period-num{font-size:22px;font-weight:800;color:var(--text)}
+.period-time{font-size:11px;color:var(--text3);margin-top:2px}
+.period-count{font-size:11px;margin-top:6px;font-weight:600}
+.student-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:8px}
+.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0;overflow:hidden}
+.student-info{flex:1;min-width:0}
+.student-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.student-meta{font-size:11px;color:var(--text2);margin-top:1px}
+.att-btns{display:flex;gap:6px}
+.att-btn{width:34px;height:34px;border-radius:10px;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.att-btn.p{background:rgba(16,185,129,.15);color:var(--green)}
+.att-btn.a{background:rgba(239,68,68,.1);color:var(--red)}
+.att-btn.selected-p{background:var(--green);color:#fff;box-shadow:0 0 10px rgba(16,185,129,.4)}
+.att-btn.selected-a{background:var(--red);color:#fff;box-shadow:0 0 10px rgba(239,68,68,.3)}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.settings-row:last-child{border-bottom:none}
+.settings-label{font-size:14px;font-weight:500}
+.settings-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.fp-circle{width:120px;height:120px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:52px;transition:all .3s;position:relative}
+.fp-circle.scanning{border-color:var(--accent);box-shadow:0 0 0 8px rgba(59,130,246,.1),0 0 0 16px rgba(59,130,246,.05);animation:fpPulse 1s ease-in-out infinite}
+.fp-circle.success{border-color:var(--green);box-shadow:0 0 0 8px rgba(16,185,129,.1)}
+@keyframes fpPulse{0%,100%{box-shadow:0 0 0 8px rgba(59,130,246,.1),0 0 0 16px rgba(59,130,246,.05)}50%{box-shadow:0 0 0 16px rgba(59,130,246,.15),0 0 0 28px rgba(59,130,246,.05)}}
+.report-scroll{overflow-x:auto;border-radius:12px;border:1px solid var(--border)}
+.report-table{border-collapse:collapse;width:100%;min-width:600px;font-size:12px}
+.report-table th{background:var(--surface);padding:10px 12px;text-align:left;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+.report-table td{padding:10px 12px;border-bottom:1px solid rgba(26,46,80,.5);vertical-align:middle}
+.report-table tr:last-child td{border-bottom:none}
+.report-table tr:nth-child(even) td{background:rgba(13,21,38,.4)}
+.divider{height:1px;background:var(--border);margin:16px 0}
+.px{padding-left:20px;padding-right:20px}
+.gap{margin-bottom:10px}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700;font-family:var(--mono)}
+.chip-p{background:rgba(16,185,129,.15);color:var(--green)}
+.chip-a{background:rgba(239,68,68,.1);color:var(--red)}
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:8px}
+.warn-banner{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:12px;font-size:12px;color:var(--amber);margin-bottom:14px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<div id="app">
+  <div class="screen" id="screen-dashboard"></div>
+  <div class="screen" id="screen-attend" style="display:none"></div>
+  <div class="screen" id="screen-students" style="display:none"></div>
+  <div class="screen" id="screen-report" style="display:none"></div>
+  <div class="screen" id="screen-settings" style="display:none"></div>
+
+  <nav id="nav">
+    <button class="nav-btn active" onclick="showScreen('dashboard')" id="nav-dashboard">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>
+      <span>Home</span><div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" onclick="showScreen('attend')" id="nav-attend">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 11.75c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25S9.69 11.75 9 11.75zm6 0c-.69 0-1.25.56-1.25 1.25s.56 1.25 1.25 1.25 1.25-.56 1.25-1.25S15.69 11.75 15 11.75zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8 0-.29.02-.58.05-.86 2.36-1.05 4.23-2.98 5.21-5.37C11.07 8.33 13.05 9.5 15.26 10c.06.35.74 2 .74 2 0 2.21-1.79 4-4 4zm4.3-8.42c-.63-.49-1.39-.8-2.21-.86-.61 1.89-2.01 3.4-3.8 4.13C10.02 17.29 10.97 18 12 18c2.21 0 4-1.79 4-4 0-.15-.01-.29-.03-.43l.33.01z"/></svg>
+      <span>Attend</span><div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" onclick="showScreen('students')" id="nav-students">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+      <span>Students</span><div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" onclick="showScreen('report')" id="nav-report">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      <span>Report</span><div class="nav-dot"></div>
+    </button>
+    <button class="nav-btn" onclick="showScreen('settings')" id="nav-settings">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+      <span>Settings</span><div class="nav-dot"></div>
+    </button>
+  </nav>
+</div>
+
+<!-- Camera Modal -->
+<div class="modal-bg" id="cam-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="cam-modal-title">Enroll Face ID</div>
+    <div id="cam-permission-area"></div>
+    <div id="cam-live-area" style="display:none">
+      <div id="cam-container">
+        <video id="cam-video" autoplay muted playsinline></video>
+        <canvas id="cam-canvas"></canvas>
+        <div id="cam-overlay"><div class="face-box"><div class="scan-line"></div></div></div>
+        <div id="face-status">Position face in frame</div>
+      </div>
+      <button class="btn btn-primary" id="cam-capture-btn" onclick="captureAction()">📸 Capture & Enroll</button>
+    </div>
+    <button class="btn btn-outline" style="margin-top:8px" onclick="closeCamera()">Cancel</button>
+  </div>
+</div>
+
+<!-- Fingerprint Modal -->
+<div class="modal-bg" id="fp-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="fp-modal-title">Enroll Fingerprint</div>
+    <div id="fp-permission-area"></div>
+    <div id="fp-live-area" style="text-align:center;padding:20px 0">
+      <div class="fp-circle" id="fp-circle">👆</div>
+      <p id="fp-status" style="margin-top:16px;font-size:14px;color:var(--text2)">Tap below to scan fingerprint</p>
+      <button class="btn btn-primary" id="fp-action-btn" style="margin-top:16px" onclick="startFingerprint()">Scan Fingerprint</button>
+    </div>
+    <button class="btn btn-outline" style="margin-top:8px" onclick="closeFP()">Cancel</button>
+  </div>
+</div>
+
+<!-- Add Student Modal -->
+<div class="modal-bg" id="add-student-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="add-student-title">Add New Student</div>
+    <div class="input-wrap"><label>Roll Number *</label><input class="inp" id="add-roll" placeholder="e.g. CS001"/></div>
+    <div class="input-wrap"><label>Full Name *</label><input class="inp" id="add-name" placeholder="Student full name"/></div>
+    <div class="input-wrap"><label>Department</label><input class="inp" id="add-dept" placeholder="e.g. Computer Science"/></div>
+    <div class="input-wrap"><label>Email (optional)</label><input class="inp" id="add-email" type="email" placeholder="student@email.com"/></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <button class="btn btn-outline" id="enroll-face-btn" onclick="openCameraForEnroll()">
+        <span id="face-enroll-icon">📷</span> Face ID
+      </button>
+      <button class="btn btn-outline" id="enroll-fp-btn" onclick="openFPForEnroll()">
+        <span id="fp-enroll-icon">👆</span> Fingerprint
+      </button>
+    </div>
+    <div id="enroll-status" style="font-size:12px;color:var(--text2);margin-bottom:12px;text-align:center"></div>
+    <button class="btn btn-primary" onclick="saveStudent()">Save Student</button>
+    <button class="btn btn-outline" style="margin-top:8px" onclick="closeAddStudent()">Cancel</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE / STORAGE
+// ═══════════════════════════════════════════════════════
+const DB = {
+  get students() { try { return JSON.parse(localStorage.getItem('sas_students')||'[]') } catch{return[]} },
+  set students(v) { localStorage.setItem('sas_students', JSON.stringify(v)) },
+  get attendance() { try { return JSON.parse(localStorage.getItem('sas_attendance')||'{}') } catch{return{}} },
+  set attendance(v) { localStorage.setItem('sas_attendance', JSON.stringify(v)) },
+  get settings() { try { return JSON.parse(localStorage.getItem('sas_settings')||'{}') } catch{return{}} },
+  set settings(v) { localStorage.setItem('sas_settings', JSON.stringify(v)) },
+};
+
+const PERIODS = [
+  {id:'p1',label:'Period 1',time:'8:00–8:50',session:'Morning'},
+  {id:'p2',label:'Period 2',time:'9:00–9:50',session:'Morning'},
+  {id:'p3',label:'Period 3',time:'10:00–10:50',session:'Morning'},
+  {id:'p4',label:'Period 4',time:'11:00–11:50',session:'Morning'},
+  {id:'p5',label:'Period 5',time:'1:00–1:50',session:'Afternoon'},
+  {id:'p6',label:'Period 6',time:'2:00–2:50',session:'Afternoon'},
+  {id:'p7',label:'Period 7',time:'3:00–3:50',session:'Afternoon'},
+  {id:'p8',label:'Period 8',time:'4:00–4:50',session:'Afternoon'},
+];
+
+let currentScreen = 'dashboard';
+let currentPeriod = null;
+let camStream = null;
+let faceDetectionInterval = null;
+let camMode = 'enroll';
+let scanResolve = null;
+let faceApiLoaded = false;
+let faceApiLoading = false;
+
+const TODAY = () => new Date().toISOString().slice(0,10);
+
+// ═══════════════════════════════════════════════════════
+// ENVIRONMENT / SECURE-CONTEXT CHECK
+// This is the actual reason camera/fingerprint "don't work":
+// getUserMedia() and WebAuthn are BLOCKED by the browser unless
+// the page is served over HTTPS (or http://localhost). They will
+// silently fail (or throw) on file:// or insecure http:// origins,
+// and on cross-origin iframes without the right permissions policy.
+// ═══════════════════════════════════════════════════════
+function isSecureContext() {
+  return window.isSecureContext === true;
+}
+function hasCameraAPI() {
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+}
+function hasWebAuthnAPI() {
+  return !!window.PublicKeyCredential;
+}
+
+// ═══════════════════════════════════════════════════════
+// SCREEN ROUTING
+// ═══════════════════════════════════════════════════════
+function showScreen(name) {
+  currentScreen = name;
+  document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-'+name).style.display = 'block';
+  document.getElementById('nav-'+name).classList.add('active');
+  renders[name]();
+}
+const renders = { dashboard: renderDashboard, attend: renderAttend, students: renderStudents, report: renderReport, settings: renderSettings };
+
+// ═══════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════
+let toastTimer;
+function toast(msg, color='#3B82F6') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.borderColor = color;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// ═══════════════════════════════════════════════════════
+// FACE API LOADER
+// ═══════════════════════════════════════════════════════
+async function loadFaceAPI() {
+  if (faceApiLoaded) return true;
+  if (faceApiLoading) {
+    // wait for in-flight load
+    while (faceApiLoading) await new Promise(r=>setTimeout(r,200));
+    return faceApiLoaded;
+  }
+  faceApiLoading = true;
+  try {
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+      faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+    ]);
+    faceApiLoaded = true;
+  } catch(e) {
+    console.warn('face-api load failed:', e);
+    faceApiLoaded = false;
+  }
+  faceApiLoading = false;
+  return faceApiLoaded;
+}
+
+// ═══════════════════════════════════════════════════════
+// CAMERA — with explicit permission request + clear errors
+// ═══════════════════════════════════════════════════════
+function renderCamPermissionBlock(message, showRetry=true) {
+  document.getElementById('cam-permission-area').style.display = 'block';
+  document.getElementById('cam-live-area').style.display = 'none';
+  document.getElementById('cam-permission-area').innerHTML = `
+    <div class="permission-box">
+      <div class="permission-icon">📷</div>
+      <p style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:16px">${message}</p>
+      ${showRetry ? `<button class="btn btn-primary" onclick="requestCameraPermission()">Allow Camera Access</button>` : ''}
+    </div>
+  `;
+}
+
+async function openCamera(mode='enroll', title='Enroll Face ID') {
+  camMode = mode;
+  document.getElementById('cam-modal-title').textContent = title;
+  document.getElementById('cam-capture-btn').textContent = mode === 'enroll' ? '📸 Capture & Enroll' : '🔍 Identify';
+  document.getElementById('cam-modal').classList.add('open');
+
+  // Hard environment checks first, with specific user-facing reasons
+  if (!isSecureContext()) {
+    renderCamPermissionBlock(
+      `Camera access needs a secure connection (HTTPS). This page is currently loaded without one, so the browser blocks the camera automatically — this is a browser security rule, not an app bug. Open this app via an https:// link (or localhost) and the permission prompt will appear normally.`,
+      false
+    );
+    return;
+  }
+  if (!hasCameraAPI()) {
+    renderCamPermissionBlock(`This browser doesn't expose a camera API. Please open this page in Chrome on Android.`, false);
+    return;
+  }
+  await requestCameraPermission();
+}
+
+async function requestCameraPermission() {
+  document.getElementById('cam-permission-area').innerHTML = `<div class="permission-box"><div class="permission-icon">📷</div><p style="font-size:13px;color:var(--text2)">Requesting camera permission…</p></div>`;
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width:{ideal:640}, height:{ideal:480} }
+    });
+  } catch(e) {
+    let msg = 'Camera could not be started.';
+    if (e.name === 'NotAllowedError') {
+      msg = `Camera permission was denied. Tap the 🔒 padlock icon in your browser's address bar → Site settings → Camera → Allow. Then try again.`;
+    } else if (e.name === 'NotFoundError') {
+      msg = `No camera was found on this device.`;
+    } else if (e.name === 'NotReadableError') {
+      msg = `Camera is in use by another app. Close other camera apps and try again.`;
+    }
+    renderCamPermissionBlock(msg);
+    return;
+  }
+
+  // Permission granted — show live feed
+  document.getElementById('cam-permission-area').style.display = 'none';
+  document.getElementById('cam-live-area').style.display = 'block';
+  document.getElementById('face-status').textContent = 'Starting camera…';
+
+  const vid = document.getElementById('cam-video');
+  vid.srcObject = camStream;
+  await new Promise(r => { vid.onloadedmetadata = r; });
+  await vid.play();
+
+  const canvas = document.getElementById('cam-canvas');
+  canvas.width = vid.videoWidth || 640;
+  canvas.height = vid.videoHeight || 480;
+
+  startFaceDetection();
+  if (!faceApiLoaded) {
+    document.getElementById('face-status').textContent = 'Loading face recognition model…';
+    const ok = await loadFaceAPI();
+    document.getElementById('face-status').textContent = ok ? 'Position face in frame' : 'Model failed to load — check internet connection';
+  }
+}
+
+function startFaceDetection() {
+  clearInterval(faceDetectionInterval);
+  faceDetectionInterval = setInterval(async () => {
+    if (!faceApiLoaded) return;
+    const vid = document.getElementById('cam-video');
+    const canvas = document.getElementById('cam-canvas');
+    if (!vid.videoWidth) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    try {
+      const det = await faceapi
+        .detectSingleFace(vid, new faceapi.TinyFaceDetectorOptions({inputSize:224,scoreThreshold:.4}))
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+      if (det) {
+        const {box} = det.detection;
+        const scaleX = canvas.width / vid.videoWidth;
+        const scaleY = canvas.height / vid.videoHeight;
+        ctx.strokeStyle = '#3B82F6';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(box.x*scaleX, box.y*scaleY, box.width*scaleX, box.height*scaleY);
+        document.getElementById('face-status').textContent = camMode === 'enroll' ? '✓ Face detected — tap Capture' : '✓ Face detected — tap Identify';
+        canvas._lastDescriptor = det.descriptor;
+      } else {
+        document.getElementById('face-status').textContent = 'No face detected — move closer / improve lighting';
+        canvas._lastDescriptor = null;
+      }
+    } catch(e) { /* detector still warming up */ }
+  }, 500);
+}
+
+async function captureAction() {
+  const canvas = document.getElementById('cam-canvas');
+  const descriptor = canvas._lastDescriptor;
+
+  if (camMode === 'enroll') {
+    if (!faceApiLoaded) { toast('Face model still loading, please wait…','#F59E0B'); return; }
+    if (!descriptor) { toast('No face detected. Face the camera in good light.','#EF4444'); return; }
+    window._enrollFaceDescriptor = Array.from(descriptor);
+    document.getElementById('face-enroll-icon').textContent = '✅';
+    document.getElementById('enroll-status').textContent = '✓ Face enrolled successfully';
+    toast('Face enrolled!', '#10B981');
+    closeCamera();
+    document.getElementById('add-student-modal').classList.add('open');
+  } else if (camMode === 'scan') {
+    const students = DB.students.filter(s => s.faceDescriptor);
+    if (!faceApiLoaded || !descriptor) { toast('No face detected.','#EF4444'); return; }
+    let best = null, bestDist = 1;
+    for (const s of students) {
+      const d = faceapi.euclideanDistance(descriptor, s.faceDescriptor);
+      if (d < bestDist) { bestDist = d; best = s; }
+    }
+    if (best && bestDist < 0.5) {
+      toast(`✓ Identified: ${best.name} (${Math.round((1-bestDist)*100)}% match)`, '#10B981');
+      closeCamera();
+      if (scanResolve) { const fn = scanResolve; scanResolve = null; fn(best); }
+    } else {
+      toast('Face not recognised. Try again or improve lighting.','#EF4444');
+    }
+  }
+}
+
+function closeCamera() {
+  clearInterval(faceDetectionInterval);
+  if (camStream) { camStream.getTracks().forEach(t=>t.stop()); camStream = null; }
+  document.getElementById('cam-modal').classList.remove('open');
+  const c = document.getElementById('cam-canvas');
+  if (c) c._lastDescriptor = null;
+  if (scanResolve) { const fn = scanResolve; scanResolve = null; fn(null); }
+}
+
+// ═══════════════════════════════════════════════════════
+// FINGERPRINT (WebAuthn) — with explicit permission/availability checks
+// ═══════════════════════════════════════════════════════
+function renderFPPermissionBlock(message, showRetry=true, retryFn='requestFPAvailability') {
+  document.getElementById('fp-permission-area').style.display = 'block';
+  document.getElementById('fp-live-area').style.display = 'none';
+  document.getElementById('fp-permission-area').innerHTML = `
+    <div class="permission-box">
+      <div class="permission-icon">👆</div>
+      <p style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:16px">${message}</p>
+      ${showRetry ? `<button class="btn btn-primary" onclick="${retryFn}()">Try Again</button>` : ''}
+    </div>
+  `;
+}
+
+let fpMode = 'enroll';
+async function openFP(mode='enroll', title='Enroll Fingerprint') {
+  fpMode = mode;
+  document.getElementById('fp-modal-title').textContent = title;
+  document.getElementById('fp-modal').classList.add('open');
+
+  if (!isSecureContext()) {
+    renderFPPermissionBlock(`Fingerprint authentication needs a secure connection (HTTPS). This page is currently loaded without one, so Android blocks biometric prompts automatically. Open this app via an https:// link and the fingerprint prompt will appear normally.`, false);
+    return;
+  }
+  if (!hasWebAuthnAPI()) {
+    renderFPPermissionBlock(`This browser doesn't support device biometrics (WebAuthn). Please use Chrome on Android.`, false);
+    return;
+  }
+  document.getElementById('fp-permission-area').innerHTML = `<div class="permission-box"><p style="font-size:13px;color:var(--text2)">Checking fingerprint sensor…</p></div>`;
+  try {
+    const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    if (!available) {
+      renderFPPermissionBlock(`No fingerprint sensor was found, or no fingerprint is enrolled in your phone's system settings. Go to Android Settings → Security → Fingerprint, enroll a finger there first, then return here.`, false);
+      return;
+    }
+  } catch(e) {
+    renderFPPermissionBlock(`Could not check fingerprint sensor availability: ${e.message}`);
+    return;
+  }
+  document.getElementById('fp-permission-area').style.display = 'none';
+  document.getElementById('fp-live-area').style.display = 'block';
+  document.getElementById('fp-circle').className = 'fp-circle';
+  document.getElementById('fp-circle').textContent = '👆';
+  document.getElementById('fp-status').textContent = mode === 'enroll' ? 'Tap below to enroll fingerprint' : 'Tap below to scan fingerprint';
+  document.getElementById('fp-action-btn').textContent = mode === 'enroll' ? 'Enroll Fingerprint' : 'Scan Fingerprint';
+  document.getElementById('fp-action-btn').onclick = mode === 'enroll' ? startFingerprintEnroll : startFingerprintScan;
+}
+
+function closeFP() {
+  document.getElementById('fp-modal').classList.remove('open');
+  if (scanResolve) { const fn = scanResolve; scanResolve = null; fn(null); }
+}
+
+async function startFingerprintEnroll() {
+  const circle = document.getElementById('fp-circle');
+  const status = document.getElementById('fp-status');
+  circle.className = 'fp-circle scanning';
+  status.textContent = 'Follow your phone\'s fingerprint prompt…';
+  try {
+    const cred = await navigator.credentials.create({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        rp: { name: 'Smart Attendance', id: location.hostname },
+        user: {
+          id: crypto.getRandomValues(new Uint8Array(16)),
+          name: 'student_'+Date.now(),
+          displayName: 'Student'
+        },
+        pubKeyCredParams: [{ alg: -7, type:'public-key' }],
+        authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+        timeout: 30000,
+      }
+    });
+    window._enrollFPCredential = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+    circle.className = 'fp-circle success';
+    circle.textContent = '✅';
+    document.getElementById('fp-enroll-icon').textContent = '✅';
+    document.getElementById('enroll-status').textContent = '✓ Fingerprint enrolled';
+    toast('Fingerprint enrolled!','#10B981');
+    setTimeout(() => { closeFP(); document.getElementById('add-student-modal').classList.add('open'); }, 600);
+  } catch(e) {
+    circle.className = 'fp-circle';
+    status.textContent = e.name === 'NotAllowedError' ? 'Cancelled or denied. Tap to try again.' : ('Failed: ' + e.message);
+    toast('Fingerprint enrollment failed','#EF4444');
+  }
+}
+
+async function startFingerprintScan() {
+  const circle = document.getElementById('fp-circle');
+  const status = document.getElementById('fp-status');
+  const students = DB.students.filter(s => s.fpCredential);
+  if (!students.length) { toast('No fingerprints enrolled yet','#EF4444'); closeFP(); return; }
+
+  circle.className = 'fp-circle scanning';
+  status.textContent = 'Follow your phone\'s fingerprint prompt…';
+  try {
+    const allowCreds = students.map(s => ({ type:'public-key', id: Uint8Array.from(atob(s.fpCredential), c=>c.charCodeAt(0)) }));
+    const assertion = await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: allowCreds,
+        userVerification: 'required',
+        timeout: 30000,
+      }
+    });
+    const usedId = btoa(String.fromCharCode(...new Uint8Array(assertion.rawId)));
+    const matched = students.find(s => s.fpCredential === usedId) || students[0];
+    circle.className = 'fp-circle success';
+    circle.textContent = '✅';
+    toast(`✓ Verified: ${matched.name}`,'#10B981');
+    setTimeout(closeFP, 500);
+    if (scanResolve) { const fn = scanResolve; scanResolve = null; fn(matched); }
+  } catch(e) {
+    circle.className = 'fp-circle';
+    status.textContent = e.name === 'NotAllowedError' ? 'Cancelled or not recognised. Try again.' : ('Failed: ' + e.message);
+    toast('Fingerprint scan failed','#EF4444');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// ADD / EDIT STUDENT
+// ═══════════════════════════════════════════════════════
+function openAddStudent() {
+  window._editingStudentId = null;
+  window._enrollFaceDescriptor = null;
+  window._enrollFPCredential = null;
+  document.getElementById('add-student-title').textContent = 'Add New Student';
+  ['add-roll','add-name','add-dept','add-email'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('face-enroll-icon').textContent = '📷';
+  document.getElementById('fp-enroll-icon').textContent = '👆';
+  document.getElementById('enroll-status').textContent = '';
+  document.getElementById('add-student-modal').classList.add('open');
+}
+function closeAddStudent() {
+  document.getElementById('add-student-modal').classList.remove('open');
+}
+function openCameraForEnroll() {
+  document.getElementById('add-student-modal').classList.remove('open');
+  openCamera('enroll','Enroll Face ID');
+}
+function openFPForEnroll() {
+  document.getElementById('add-student-modal').classList.remove('open');
+  openFP('enroll','Enroll Fingerprint');
+}
+function saveStudent() {
+  const roll = document.getElementById('add-roll').value.trim();
+  const name = document.getElementById('add-name').value.trim();
+  const dept = document.getElementById('add-dept').value.trim();
+  const email = document.getElementById('add-email').value.trim();
+  if (!roll || !name) { toast('Roll number and name are required','#EF4444'); return; }
+  const students = DB.students;
+  const editId = window._editingStudentId;
+
+  if (editId) {
+    const idx = students.findIndex(s=>s.id===editId);
+    if (idx !== -1) {
+      if (students.some((s,i)=>i!==idx && s.roll===roll)) { toast('Roll number already exists','#EF4444'); return; }
+      students[idx].roll = roll; students[idx].name = name; students[idx].dept = dept; students[idx].email = email;
+      if (window._enrollFaceDescriptor) students[idx].faceDescriptor = window._enrollFaceDescriptor;
+      if (window._enrollFPCredential) students[idx].fpCredential = window._enrollFPCredential;
+      DB.students = students;
+      toast('Student updated!','#10B981');
+    }
+  } else {
+    if (students.find(s => s.roll === roll)) { toast('Roll number already exists','#EF4444'); return; }
+    students.push({
+      id: Date.now().toString(), roll, name, dept, email,
+      faceDescriptor: window._enrollFaceDescriptor, fpCredential: window._enrollFPCredential,
+      createdAt: new Date().toISOString(),
+    });
+    DB.students = students;
+    toast(`${name} added!`, '#10B981');
+  }
+  window._editingStudentId = null;
+  closeAddStudent();
+  if (currentScreen === 'students') renderStudents();
+  if (currentScreen === 'dashboard') renderDashboard();
+}
+function openEditStudent(sid) {
+  const s = DB.students.find(x=>x.id===sid);
+  if (!s) return;
+  window._editingStudentId = sid;
+  window._enrollFaceDescriptor = null;
+  window._enrollFPCredential = null;
+  document.getElementById('add-student-title').textContent = 'Edit Student';
+  document.getElementById('add-roll').value = s.roll;
+  document.getElementById('add-name').value = s.name;
+  document.getElementById('add-dept').value = s.dept||'';
+  document.getElementById('add-email').value = s.email||'';
+  document.getElementById('face-enroll-icon').textContent = s.faceDescriptor ? '✅' : '📷';
+  document.getElementById('fp-enroll-icon').textContent = s.fpCredential ? '✅' : '👆';
+  document.getElementById('enroll-status').textContent = '';
+  document.getElementById('add-student-modal').classList.add('open');
+}
+function deleteStudent(sid) {
+  if (!confirm('Delete this student?')) return;
+  DB.students = DB.students.filter(s => s.id !== sid);
+  toast('Student deleted','#EF4444');
+  renderStudents();
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDashboard() {
+  const students = DB.students;
+  const att = DB.attendance;
+  const today = TODAY();
+  const todayAtt = att[today] || {};
+  let totalPresent = 0, totalAbsent = 0;
+  PERIODS.forEach(p => {
+    const pd = todayAtt[p.id] || {};
+    students.forEach(s => { if (pd[s.id] === 'P') totalPresent++; else if (pd[s.id] === 'A') totalAbsent++; });
+  });
+  const takenToday = PERIODS.filter(p => Object.keys(todayAtt[p.id]||{}).length > 0).length;
+  const now = new Date();
+  const settings = DB.settings;
+  const secure = isSecureContext();
+
+  document.getElementById('screen-dashboard').innerHTML = `
+    <div class="hdr px">
+      <div>
+        <div class="hdr-sub">Smart Attendance</div>
+        <div class="hdr-title">Dashboard</div>
+      </div>
+      <div class="icon-btn" onclick="showScreen('settings')">⚙️</div>
+    </div>
+    <div class="px">
+      ${!secure ? `<div class="warn-banner">⚠️ This page isn't loaded over HTTPS, so the camera and fingerprint sensor will be blocked by the browser. Open this file through an https:// address (e.g. host it, or open via Claude's preview link) for biometric scanning to work.</div>` : ''}
+      <div class="card" style="background:linear-gradient(145deg,#0E1E3D,#0B1526);border-color:#1A3A6A;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text3);letter-spacing:2px">TODAY</div>
+        <div style="font-size:38px;font-weight:800;letter-spacing:-1px;margin-top:4px" id="live-clock">${now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:2px">${now.toLocaleDateString([],{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <span class="badge badge-blue">📅 ${takenToday}/8 Periods Done</span>
+          ${settings.className ? `<span class="badge badge-amber">🏫 ${settings.className}</span>` : ''}
+        </div>
+      </div>
+      <div class="stat-grid gap">
+        <div class="stat-card"><div class="stat-val" style="color:var(--accent)">${students.length}</div><div class="stat-lbl">👥 Total Students</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--green)">${totalPresent}</div><div class="stat-lbl">✅ Present Marks</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--red)">${totalAbsent}</div><div class="stat-lbl">❌ Absent Marks</div></div>
+        <div class="stat-card"><div class="stat-val" style="color:var(--amber)">${takenToday}</div><div class="stat-lbl">📋 Periods Done</div></div>
+      </div>
+      <div class="section-label">Quick Actions</div>
+      <button class="btn btn-primary gap" onclick="showScreen('attend')">📸 Take Attendance</button>
+      <button class="btn btn-green gap" onclick="sendDailyReport()">📧 Send Today's Report Now</button>
+      <button class="btn btn-outline" onclick="openAddStudent()">➕ Add New Student</button>
+      <div class="section-label">Today's Periods</div>
+      ${PERIODS.map(p => {
+        const pd = todayAtt[p.id] || {};
+        const pCount = Object.values(pd).filter(v=>v==='P').length;
+        const aCount = Object.values(pd).filter(v=>v==='A').length;
+        const done = Object.keys(pd).length > 0;
+        return `<div class="student-row" style="cursor:pointer" onclick="selectPeriodAndGo('${p.id}')">
+          <div class="avatar" style="background:${done?'var(--green)':'var(--border)'}">${done ? '✓' : p.id.replace('p','')}</div>
+          <div class="student-info">
+            <div class="student-name">${p.label} <span style="color:var(--text3);font-size:11px">${p.session}</span></div>
+            <div class="student-meta">${p.time}${done ? ` · P:${pCount} A:${aCount}` : ' · Not taken'}</div>
+          </div>
+          ${done ? `<span class="badge badge-green">Done</span>` : `<span class="badge" style="background:var(--surface);color:var(--text3)">Pending</span>`}
+        </div>`
+      }).join('')}
+      <div style="height:20px"></div>
+    </div>
+  `;
+  clearInterval(window._clockInt);
+  window._clockInt = setInterval(() => {
+    const el = document.getElementById('live-clock');
+    if (el) el.textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  }, 10000);
+}
+function selectPeriodAndGo(pid) { currentPeriod = pid; showScreen('attend'); }
+
+// ═══════════════════════════════════════════════════════
+// ATTENDANCE SCREEN
+// ═══════════════════════════════════════════════════════
+function renderAttend() {
+  const students = DB.students;
+  const today = TODAY();
+  const att = DB.attendance;
+  const todayAtt = att[today] || {};
+  const pd = currentPeriod ? (todayAtt[currentPeriod] || {}) : {};
+  const selPeriod = PERIODS.find(p => p.id === currentPeriod);
+  const secure = isSecureContext();
+
+  document.getElementById('screen-attend').innerHTML = `
+    <div class="hdr px"><div><div class="hdr-sub">Mark Attendance</div><div class="hdr-title">Take Attendance</div></div></div>
+    <div class="px">
+      ${!secure ? `<div class="warn-banner">⚠️ Camera & fingerprint scanning need HTTPS. Use manual P/A buttons below, or open this app via a secure link.</div>` : ''}
+      <div class="section-label">Select Period</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        ${PERIODS.map(p => {
+          const ppd = todayAtt[p.id] || {};
+          const done = Object.keys(ppd).length > 0;
+          const pCnt = Object.values(ppd).filter(v=>v==='P').length;
+          return `<div class="period-card ${currentPeriod===p.id?'active-period':''} ${done&&currentPeriod!==p.id?'done':''}" onclick="setPeriod('${p.id}')">
+            <div style="font-size:11px;color:var(--text3)">${p.session}</div>
+            <div class="period-num">${p.id.replace('p','')}</div>
+            <div class="period-time">${p.time}</div>
+            <div class="period-count" style="color:${done?'var(--green)':'var(--text3)'}">${done ? `P:${pCnt} / ${students.length}` : 'Pending'}</div>
+          </div>`
+        }).join('')}
+      </div>
+      ${currentPeriod ? `
+        <div class="card" style="margin-bottom:12px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px">📋 ${selPeriod.label} — ${selPeriod.time} <span class="badge badge-blue" style="margin-left:6px">${selPeriod.session}</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <button class="btn btn-primary btn-sm" onclick="scanFaceForAttendance()">📷 Face Scan</button>
+            <button class="btn btn-outline btn-sm" style="justify-content:center" onclick="scanFPForAttendance()">👆 Fingerprint</button>
+          </div>
+          <div style="margin-top:10px"><button class="btn btn-green btn-sm" onclick="markAllPresent()" style="width:100%;justify-content:center">✅ Mark All Present</button></div>
+        </div>
+        ${(() => {
+          const absentees = students.filter(s => pd[s.id] === 'A');
+          if (!absentees.length) return '';
+          return `<div class="card" style="margin-bottom:12px;border-color:rgba(239,68,68,.3)">
+            <div style="font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px">🚫 Absentees (${absentees.length}) — Roll Numbers:</div>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--text2);word-break:break-all">${absentees.map(s => s.roll).join(' · ')}</div>
+          </div>`
+        })()}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="section-label" style="margin:0">Students (${students.length})</div>
+          <div style="font-size:12px;color:var(--text2)">P: ${Object.values(pd).filter(v=>v==='P').length}  A: ${Object.values(pd).filter(v=>v==='A').length}</div>
+        </div>
+        ${students.length === 0 ? `<div class="empty"><div class="empty-icon">👥</div>No students enrolled yet.<br><br><button class="btn btn-primary btn-sm" onclick="openAddStudent()">Add Student</button></div>` :
+          students.map(s => {
+            const st = pd[s.id];
+            return `<div class="student-row">
+              <div class="avatar">${s.faceDescriptor ? '🤳' : s.name.slice(0,2).toUpperCase()}</div>
+              <div class="student-info"><div class="student-name">${s.name}</div><div class="student-meta">${s.roll} ${s.dept ? '· '+s.dept : ''}</div></div>
+              <div class="att-btns">
+                <button class="att-btn p ${st==='P'?'selected-p':''}" onclick="markAttendance('${s.id}','P')">P</button>
+                <button class="att-btn a ${st==='A'?'selected-a':''}" onclick="markAttendance('${s.id}','A')">A</button>
+              </div>
+            </div>`
+          }).join('')
+        }
+        <div style="height:20px"></div>
+      ` : `<div class="empty"><div class="empty-icon">📋</div>Select a period above to start taking attendance</div>`}
+    </div>
+  `;
+}
+function setPeriod(pid) { currentPeriod = pid; renderAttend(); }
+function markAttendance(studentId, status) {
+  const today = TODAY();
+  const att = DB.attendance;
+  if (!att[today]) att[today] = {};
+  if (!att[today][currentPeriod]) att[today][currentPeriod] = {};
+  att[today][currentPeriod][studentId] = status;
+  DB.attendance = att;
+  renderAttend();
+}
+function markAllPresent() {
+  const students = DB.students; const today = TODAY(); const att = DB.attendance;
+  if (!att[today]) att[today] = {};
+  if (!att[today][currentPeriod]) att[today][currentPeriod] = {};
+  students.forEach(s => att[today][currentPeriod][s.id] = 'P');
+  DB.attendance = att;
+  toast('All marked Present ✓','#10B981');
+  renderAttend();
+}
+function scanFaceForAttendance() {
+  if (!currentPeriod) { toast('Select a period first','#F59E0B'); return; }
+  if (DB.students.filter(s=>s.faceDescriptor).length === 0) { toast('No face IDs enrolled yet','#EF4444'); return; }
+  scanResolve = (student) => { if (student) { markAttendance(student.id, 'P'); toast(`✓ ${student.name} marked Present`,'#10B981'); } };
+  openCamera('scan','Face Scan — Identify Student');
+}
+function scanFPForAttendance() {
+  if (!currentPeriod) { toast('Select a period first','#F59E0B'); return; }
+  if (DB.students.filter(s=>s.fpCredential).length === 0) { toast('No fingerprints enrolled yet','#EF4444'); return; }
+  scanResolve = (student) => { if (student) { markAttendance(student.id, 'P'); toast(`✓ ${student.name} marked Present`,'#10B981'); } };
+  openFP('scan','Fingerprint — Identify Student');
+}
+
+// ═══════════════════════════════════════════════════════
+// STUDENTS SCREEN
+// ═══════════════════════════════════════════════════════
+function renderStudents() {
+  const students = DB.students;
+  const q = (document.getElementById('student-search')||{}).value || '';
+  const filtered = students.filter(s => s.name.toLowerCase().includes(q.toLowerCase()) || s.roll.toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('screen-students').innerHTML = `
+    <div class="hdr px">
+      <div><div class="hdr-sub">Enrolled Students</div><div class="hdr-title">Students <span style="color:var(--text3)">(${students.length})</span></div></div>
+      <div class="icon-btn" onclick="openAddStudent()">➕</div>
+    </div>
+    <div class="px">
+      <div style="margin-bottom:14px"><input class="inp" id="student-search" placeholder="🔍  Search by name or roll…" value="${q}" oninput="renderStudents()"/></div>
+      ${filtered.length === 0 ? `<div class="empty"><div class="empty-icon">👥</div>${students.length===0 ? 'No students yet. Tap ➕ to add.' : 'No results found.'}</div>` :
+        filtered.map(s => {
+          const att = DB.attendance;
+          let totalP=0, totalA=0;
+          Object.values(att).forEach(day => { PERIODS.forEach(p => { const pd = (day[p.id]||{}); if (pd[s.id]==='P') totalP++; else if (pd[s.id]==='A') totalA++; }); });
+          return `<div class="student-row" style="align-items:flex-start">
+            <div class="avatar" style="margin-top:2px;font-size:15px">${s.name.slice(0,2).toUpperCase()}</div>
+            <div class="student-info">
+              <div class="student-name">${s.name}</div>
+              <div class="student-meta">${s.roll}${s.dept?' · '+s.dept:''}</div>
+              <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+                <span class="chip ${s.faceDescriptor?'chip-p':'chip-a'}">${s.faceDescriptor?'✓ Face':'✗ Face'}</span>
+                <span class="chip ${s.fpCredential?'chip-p':'chip-a'}">${s.fpCredential?'✓ FP':'✗ FP'}</span>
+                <span class="chip chip-p">P:${totalP}</span>
+                <span class="chip chip-a">A:${totalA}</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+              <button class="btn btn-outline btn-sm" onclick="openEditStudent('${s.id}')">Edit</button>
+              <button class="btn btn-red btn-sm" onclick="deleteStudent('${s.id}')">Del</button>
+            </div>
+          </div>`
+        }).join('')
+      }
+      <div style="height:20px"></div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════
+// REPORT SCREEN
+// ═══════════════════════════════════════════════════════
+function renderReport() {
+  const students = DB.students;
+  const att = DB.attendance;
+  const dates = Object.keys(att).sort().reverse();
+  const today = TODAY();
+  const todayAtt = att[today] || {};
+
+  document.getElementById('screen-report').innerHTML = `
+    <div class="hdr px"><div><div class="hdr-sub">Attendance Report</div><div class="hdr-title">Reports</div></div></div>
+    <div class="px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        <button class="btn btn-primary" onclick="sendDailyReport()">📧 Email Report</button>
+        <button class="btn btn-green" onclick="downloadExcel()">⬇️ Download Excel</button>
+      </div>
+      <div class="section-label">Today — Period-wise Absentees</div>
+      ${PERIODS.map(p => {
+        const pd = todayAtt[p.id] || {};
+        const absentees = students.filter(s => pd[s.id]==='A');
+        const presentees = students.filter(s => pd[s.id]==='P');
+        const taken = Object.keys(pd).length > 0;
+        return `<div class="card" style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:${taken?8:0}px">
+            <div><span style="font-weight:700;font-size:14px">${p.label}</span><span style="color:var(--text3);font-size:11px;margin-left:6px">${p.time}</span></div>
+            <div style="display:flex;gap:5px">
+              ${taken ? `<span class="badge badge-green">P:${presentees.length}</span><span class="badge badge-red">A:${absentees.length}</span>` : `<span class="badge" style="background:var(--surface);color:var(--text3)">Not taken</span>`}
+            </div>
+          </div>
+          ${taken && absentees.length > 0 ? `<div style="font-size:11px;color:var(--red);font-family:var(--mono)">Absent: ${absentees.map(s=>s.roll).join(', ')}</div>` : taken && absentees.length===0 ? `<div style="font-size:11px;color:var(--green)">All present ✓</div>` : ''}
+        </div>`
+      }).join('')}
+      <div class="section-label">Full Attendance Table — Today</div>
+      ${students.length === 0 ? `<div class="empty"><div class="empty-icon">📋</div>No students enrolled.</div>` : `
+        <div class="report-scroll"><table class="report-table">
+          <thead><tr><th>Roll</th><th>Name</th>${PERIODS.map(p=>`<th>${p.label.replace('Period ','P')}</th>`).join('')}<th style="color:var(--green)">Total P</th><th style="color:var(--red)">Total A</th><th style="color:var(--amber)">Notes</th></tr></thead>
+          <tbody>
+            ${students.map(s => {
+              let tp=0, ta=0;
+              const cells = PERIODS.map(p => {
+                const val = (todayAtt[p.id]||{})[s.id];
+                if (val==='P') tp++; else if (val==='A') ta++;
+                return `<td style="text-align:center">${val === 'P' ? `<span class="chip chip-p">P</span>` : val === 'A' ? `<span class="chip chip-a">A</span>` : `<span style="color:var(--text3)">—</span>`}</td>`;
+              }).join('');
+              return `<tr><td style="font-family:var(--mono);font-weight:700">${s.roll}</td><td style="font-weight:600">${s.name}</td>${cells}<td style="text-align:center;color:var(--green);font-weight:700">${tp}</td><td style="text-align:center;color:var(--red);font-weight:700">${ta}</td>
+                <td><input style="background:transparent;border:none;color:var(--text2);font-size:11px;width:80px;font-family:var(--font)" placeholder="notes…" id="note-${s.id}"/></td></tr>`
+            }).join('')}
+          </tbody>
+        </table></div>
+      `}
+      ${dates.filter(d=>d!==today).length > 0 ? `
+        <div class="section-label">Past Records</div>
+        ${dates.filter(d=>d!==today).map(d => {
+          const da = att[d]; let tp=0, ta=0;
+          PERIODS.forEach(p => { Object.values(da[p.id]||{}).forEach(val => { if(val==='P')tp++; else if(val==='A')ta++; }); });
+          return `<div class="student-row">
+            <div class="avatar" style="background:var(--surface)">📅</div>
+            <div class="student-info"><div class="student-name">${new Date(d).toLocaleDateString([],{weekday:'short',month:'short',day:'numeric'})}</div><div class="student-meta">Present marks: ${tp} · Absent marks: ${ta}</div></div>
+            <button class="btn btn-outline btn-sm" onclick="downloadExcel('${d}')">Export</button>
+          </div>`
+        }).join('')}
+      ` : ''}
+      <div style="height:20px"></div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════
+// SETTINGS — simplified to JUST sender + receiver email
+// ═══════════════════════════════════════════════════════
+function renderSettings() {
+  const s = DB.settings;
+  document.getElementById('screen-settings').innerHTML = `
+    <div class="hdr px"><div><div class="hdr-sub">Configuration</div><div class="hdr-title">Settings</div></div></div>
+    <div class="px">
+      <div class="section-label">Institution</div>
+      <div class="card">
+        <div class="input-wrap"><label>Institution / School Name</label><input class="inp" id="set-inst" value="${s.institution||''}" placeholder="e.g. ABC Engineering College"/></div>
+        <div class="input-wrap"><label>Class / Section</label><input class="inp" id="set-class" value="${s.className||''}" placeholder="e.g. CS-A 2024"/></div>
+        <div class="input-wrap" style="margin-bottom:0"><label>Teacher / Faculty Name</label><input class="inp" id="set-teacher" value="${s.teacher||''}" placeholder="Prof. Your Name"/></div>
+      </div>
+
+      <div class="section-label">Email</div>
+      <div class="card">
+        <div class="input-wrap"><label>Send report from (your email)</label>
+          <input class="inp" id="set-from-email" value="${s.fromEmail||''}" placeholder="you@gmail.com" type="email"/></div>
+        <div class="input-wrap" style="margin-bottom:0"><label>Send report to (recipient email)</label>
+          <input class="inp" id="set-to-email" value="${s.toEmail||''}" placeholder="recipient@email.com" type="email"/></div>
+      </div>
+
+      <div class="warn-banner" style="margin-top:14px">
+        ℹ️ Browsers cannot send email on their own — there's no SMTP access in JavaScript. Tapping "Send Report" below will open your phone's email app with the recipient, subject, and full attendance summary pre-filled, and download the Excel file for you to attach — one tap to send. For a fully silent, no-tap auto-send, a small backend mail relay is needed; let me know if you want that set up next.
+      </div>
+
+      <div class="section-label">Daily Reminder</div>
+      <div class="card">
+        <div class="settings-row">
+          <div><div class="settings-label">Remind me to send report</div><div class="settings-sub">Shows a notification banner at this time daily</div></div>
+          <label style="position:relative;display:inline-block;width:44px;height:24px;cursor:pointer">
+            <input type="checkbox" id="set-auto-send" ${s.autoSend?'checked':''} style="opacity:0;width:0;height:0" onchange="saveSettings()">
+            <span style="position:absolute;inset:0;background:${s.autoSend?'var(--green)':'var(--border)'};border-radius:12px;transition:.3s"><span style="position:absolute;left:${s.autoSend?'22':'2'}px;top:2px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span></span>
+          </label>
+        </div>
+        <div class="settings-row"><div><div class="settings-label">Reminder time</div></div><input type="time" class="inp" id="set-auto-time" value="${s.autoTime||'17:00'}" style="width:auto;padding:6px 10px"/></div>
+      </div>
+
+      <button class="btn btn-primary" style="margin-top:14px" onclick="saveSettings()">💾 Save Settings</button>
+
+      <div class="section-label">Data Management</div>
+      <div class="card">
+        <div class="settings-row"><div><div class="settings-label">Export all data</div><div class="settings-sub">Download complete Excel backup</div></div><button class="btn btn-outline btn-sm" onclick="downloadExcel()">Export</button></div>
+        <div class="settings-row"><div><div class="settings-label" style="color:var(--red)">Clear today's attendance</div></div><button class="btn btn-red btn-sm" onclick="clearToday()">Clear</button></div>
+        <div class="settings-row"><div><div class="settings-label" style="color:var(--red)">Reset ALL data</div><div class="settings-sub">Removes all students & records</div></div><button class="btn btn-red btn-sm" onclick="resetAll()">Reset</button></div>
+      </div>
+      <div style="height:20px"></div>
+    </div>
+  `;
+}
+function saveSettings() {
+  const s = {
+    institution: v('set-inst'), className: v('set-class'), teacher: v('set-teacher'),
+    fromEmail: v('set-from-email'), toEmail: v('set-to-email'),
+    autoSend: (document.getElementById('set-auto-send')||{}).checked || false,
+    autoTime: v('set-auto-time') || '17:00',
+  };
+  DB.settings = s;
+  toast('Settings saved ✓','#10B981');
+  scheduleReminder();
+}
+function v(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function clearToday() {
+  if (!confirm("Clear today's attendance?")) return;
+  const att = DB.attendance; delete att[TODAY()]; DB.attendance = att;
+  toast('Today cleared','#EF4444'); renderReport();
+}
+function resetAll() {
+  if (!confirm('DELETE ALL DATA? This cannot be undone.')) return;
+  localStorage.removeItem('sas_students'); localStorage.removeItem('sas_attendance');
+  toast('All data reset','#EF4444'); renderSettings();
+}
+
+// ═══════════════════════════════════════════════════════
+// EXCEL EXPORT
+// ═══════════════════════════════════════════════════════
+function buildExcelData(dateKey) {
+  const students = DB.students; const att = DB.attendance; const settings = DB.settings;
+  const dateAtt = att[dateKey] || {};
+  const dateLabel = new Date(dateKey).toLocaleDateString([],{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const headers = [
+    ['Smart Attendance System'],
+    [settings.institution || 'Institution'],
+    [`Class: ${settings.className||'—'}   Teacher: ${settings.teacher||'—'}`],
+    [`Date: ${dateLabel}`],
+    [],
+    ['Roll No', 'Student Name', 'Department', ...PERIODS.map(p => `${p.label} (${p.time})`), 'Total Present', 'Total Absent', 'Attendance %', 'Extra Notes']
+  ];
+  const absenteeSummary = ['ABSENTEE ROLL NOS →', '', '',
+    ...PERIODS.map(p => { const pd = dateAtt[p.id] || {}; const abs = students.filter(s => pd[s.id]==='A').map(s=>s.roll); return abs.length ? abs.join(', ') : '—'; }),
+    '', '', '', ''
+  ];
+  const rows = students.map(s => {
+    let tp=0, ta=0;
+    const periods = PERIODS.map(p => { const val = (dateAtt[p.id]||{})[s.id]; if (val==='P') tp++; else if (val==='A') ta++; return val || '—'; });
+    const pct = tp+ta > 0 ? Math.round(tp/(tp+ta)*100)+'%' : '—';
+    const noteEl = document.getElementById('note-'+s.id);
+    const note = noteEl ? noteEl.value : '';
+    return [s.roll, s.name, s.dept||'', ...periods, tp, ta, pct, note];
+  });
+  return [...headers, absenteeSummary, ...rows];
+}
+
+function buildWorkbook(dk) {
+  const data = buildExcelData(dk);
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws['!cols'] = [{wch:10},{wch:22},{wch:18},...PERIODS.map(()=>({wch:14})),{wch:10},{wch:10},{wch:12},{wch:20}];
+  ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:11}},{s:{r:1,c:0},e:{r:1,c:11}},{s:{r:2,c:0},e:{r:2,c:11}},{s:{r:3,c:0},e:{r:3,c:11}}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+
+  const students = DB.students; const att = DB.attendance; const allDates = Object.keys(att).sort();
+  if (allDates.length) {
+    const summaryData = [
+      ['ATTENDANCE SUMMARY — ALL DATES'],
+      ['Student', 'Roll', ...allDates.map(d=>new Date(d).toLocaleDateString([],{month:'short',day:'numeric'})), 'Overall %'],
+      ...students.map(s => {
+        let total=0, present=0;
+        const dayVals = allDates.map(d => {
+          let dp=0, da=0;
+          PERIODS.forEach(p => { const val=(att[d][p.id]||{})[s.id]; if(val==='P'){dp++;present++;total++;} else if(val==='A'){da++;total++;} });
+          return dp+da>0 ? `P${dp}/A${da}` : '—';
+        });
+        const pct = total>0 ? Math.round(present/total*100)+'%' : '—';
+        return [s.name, s.roll, ...dayVals, pct];
+      })
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+    ws2['!cols'] = [{wch:22},{wch:10},...allDates.map(()=>({wch:12})),{wch:10}];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
+  }
+  return wb;
+}
+
+function downloadExcel(dateKey) {
+  const dk = dateKey || TODAY();
+  const wb = buildWorkbook(dk);
+  XLSX.writeFile(wb, `Attendance_${dk}.xlsx`);
+  toast('Excel downloaded ✓','#10B981');
+  return wb;
+}
+
+// ═══════════════════════════════════════════════════════
+// SEND REPORT — sender + receiver only, no third-party signup.
+// Downloads the Excel file AND opens the phone's email app with
+// recipient, subject, and a full text summary pre-filled.
+// The person attaches the just-downloaded file (one tap) and sends.
+// ═══════════════════════════════════════════════════════
+function sendDailyReport() {
+  const settings = DB.settings;
+  if (!settings.fromEmail || !settings.toEmail) {
+    toast('Add sender & receiver email in Settings first','#F59E0B');
+    showScreen('settings');
+    return;
+  }
+  const dk = TODAY();
+  const students = DB.students;
+  const todayAtt = (DB.attendance[dk]) || {};
+
+  // Download the excel first
+  downloadExcel(dk);
+
+  // Build summary body
+  let lines = [
+    `Smart Attendance Report — ${dk}`,
+    `Class: ${settings.className||'—'}    Institution: ${settings.institution||'—'}`,
+    ``,
+    `PERIOD-WISE SUMMARY:`,
+  ];
+  PERIODS.forEach(p => {
+    const pd = todayAtt[p.id]||{};
+    const pCnt = students.filter(s=>pd[s.id]==='P').length;
+    const aCnt = students.filter(s=>pd[s.id]==='A').length;
+    const abs = students.filter(s=>pd[s.id]==='A').map(s=>s.roll).join(', ');
+    const taken = Object.keys(pd).length > 0;
+    lines.push(`${p.label} (${p.time}): ${taken ? `Present=${pCnt}, Absent=${aCnt}${abs ? ' | Absent roll nos: '+abs : ''}` : 'Not taken'}`);
+  });
+  lines.push('', 'NOTE: The Excel file has just been downloaded to your device — please attach it to this email before sending (Gmail: tap the paperclip icon).', '');
+
+  setTimeout(() => {
+    const mailto = `mailto:${encodeURIComponent(settings.toEmail)}?subject=${encodeURIComponent('Attendance Report — '+(settings.className||'Class')+' — '+dk)}&body=${encodeURIComponent(lines.join('\n'))}`;
+    window.location.href = mailto;
+    toast('Excel downloaded — attach it in your email app', '#3B82F6');
+  }, 600);
+}
+
+// ═══════════════════════════════════════════════════════
+// DAILY REMINDER (local notification-style banner, since true
+// silent background send isn't possible from a browser tab alone)
+// ═══════════════════════════════════════════════════════
+function scheduleReminder() {
+  clearInterval(window._reminderInt);
+  const s = DB.settings;
+  if (!s.autoSend || !s.autoTime) return;
+  const [hh, mm] = s.autoTime.split(':').map(Number);
+  window._reminderInt = setInterval(() => {
+    const now = new Date();
+    if (now.getHours()===hh && now.getMinutes()===mm) {
+      const lastShown = localStorage.getItem('sas_last_reminder');
+      if (lastShown !== TODAY()) {
+        localStorage.setItem('sas_last_reminder', TODAY());
+        toast("📧 Time to send today's attendance report!", '#F59E0B');
+      }
+    }
+  }, 30000);
+}
+
+// ═══════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════
+window.onload = () => {
+  renders.dashboard();
+  scheduleReminder();
+  setTimeout(() => loadFaceAPI(), 1500);
+};
+</script>
+</body>
+</html>
